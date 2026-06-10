@@ -740,6 +740,116 @@ select.form-input option { background: var(--navy-mid); color: var(--white); }
 .chip-start { background: rgba(255,255,255,0.1); color: var(--text-muted); }
 
 hr.divider { border: none; border-top: 0.5px solid var(--border); margin: 1.5rem 0; }
+
+/* ── AVATAR PHOTO UPLOAD ── */
+.avatar-upload-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.avatar-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--gold-faint);
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--gold);
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+.avatar-preview:hover { border-color: var(--gold-light); }
+.avatar-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+.avatar-upload-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.avatar-img-display {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+/* ── ADMIN PANEL ── */
+.admin-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  background: rgba(213,43,30,0.2);
+  border: 0.5px solid rgba(213,43,30,0.5);
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #e74c3c;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.admin-card {
+  background: rgba(213,43,30,0.05);
+  border: 0.5px solid rgba(213,43,30,0.25);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.admin-card h3 { font-size: 1rem; font-weight: 500; margin-bottom: 1.25rem; color: #e74c3c; }
+
+.admin-user-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--card-bg);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  transition: background 0.15s;
+}
+
+.admin-user-row:hover { background: var(--card-hover); }
+
+.admin-user-info { flex: 1; }
+.admin-user-name { font-size: 0.88rem; font-weight: 500; }
+.admin-user-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+.btn-admin-del {
+  padding: 0.3rem 0.65rem;
+  background: transparent;
+  border: 0.5px solid rgba(213,43,30,0.4);
+  border-radius: 6px;
+  color: #e74c3c;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-admin-del:hover { background: rgba(213,43,30,0.1); }
+
+/* nav avatar with photo */
+.nav-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
 </style>
 </head>
 <body>
@@ -821,6 +931,7 @@ hr.divider { border: none; border-top: 0.5px solid var(--border); margin: 1.5rem
     <button class="nav-tab" onclick="showSection('lancamentos')">Lançamentos</button>
     <button class="nav-tab" onclick="showSection('ranking')">Ranking</button>
     <button class="nav-tab" onclick="showSection('configuracoes')">Configurações</button>
+    <button class="nav-tab" id="tab-admin" style="display:none" onclick="showSection('admin')">⚙ Admin</button>
   </div>
 
   <div class="content">
@@ -936,6 +1047,20 @@ hr.divider { border: none; border-top: 0.5px solid var(--border); margin: 1.5rem
 
     <!-- ── CONFIGURAÇÕES ── -->
     <div id="section-configuracoes" class="section">
+
+      <!-- FOTO DE PERFIL -->
+      <div class="setup-card">
+        <h3>Foto de perfil</h3>
+        <div class="avatar-upload-wrap">
+          <div class="avatar-preview" id="cfg-avatar-preview" onclick="document.getElementById('cfg-avatar-input').click()">
+            <span id="cfg-avatar-initials">??</span>
+          </div>
+          <div class="avatar-upload-hint">Clique na foto para alterar<br>JPG ou PNG · máx 2 MB</div>
+          <input type="file" id="cfg-avatar-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+          <button class="btn-danger" id="btn-remove-avatar" style="display:none;font-size:0.75rem;padding:0.4rem 0.9rem;" onclick="removeAvatar()">Remover foto</button>
+        </div>
+      </div>
+
       <div class="setup-card">
         <h3>Configurações da viagem</h3>
         <div class="setup-grid">
@@ -969,6 +1094,18 @@ hr.divider { border: none; border-top: 0.5px solid var(--border); margin: 1.5rem
       </div>
     </div>
 
+    <!-- ── ADMIN ── -->
+    <div id="section-admin" class="section">
+      <div class="admin-card">
+        <h3>🔐 Painel Admin <span class="admin-badge">restrito</span></h3>
+        <div id="admin-user-list"></div>
+      </div>
+      <div class="setup-card">
+        <h3 style="color:var(--text-soft)">Estatísticas gerais</h3>
+        <div id="admin-stats" style="font-size:0.85rem; color:var(--text-soft); line-height:2;"></div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main-screen -->
 
@@ -989,6 +1126,32 @@ function saveDB(db) {
   localStorage.setItem(STORE_KEY, JSON.stringify(db));
 }
 
+// ══ ADMIN SEED ══
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD = 'ChileVrau2026!';
+const ADMIN_NAME     = 'Administrador';
+
+function seedAdmin() {
+  const db = loadDB();
+  if (!db.users[ADMIN_USERNAME]) {
+    db.users[ADMIN_USERNAME] = {
+      username: ADMIN_USERNAME,
+      name: ADMIN_NAME,
+      password: btoa(ADMIN_PASSWORD),
+      meta: 99999,
+      meses: 12,
+      entries: [],
+      isAdmin: true,
+      createdAt: new Date().toISOString()
+    };
+    saveDB(db);
+  } else {
+    // garante que o admin sempre tem a flag
+    db.users[ADMIN_USERNAME].isAdmin = true;
+    saveDB(db);
+  }
+}
+
 // ══ STATE ══
 let currentUser = null;
 let entryType = 'income';
@@ -1003,15 +1166,17 @@ function showTab(tab) {
 }
 
 function initAuth() {
+  seedAdmin();
   const db = loadDB();
-  const users = Object.values(db.users);
+  // mostrar apenas usuários não-admin na tela de quick login
+  const users = Object.values(db.users).filter(u => !u.isAdmin);
   const qw = document.getElementById('profile-quick');
   const ql = document.getElementById('quick-list');
   if (users.length > 0) {
     qw.style.display = 'block';
     ql.innerHTML = users.map(u => `
       <div class="profile-item" onclick="quickLogin('${u.username}')">
-        <div class="profile-avatar">${initials(u.name)}</div>
+        <div class="profile-avatar">${avatarContent(u, 36)}</div>
         <div class="profile-info">
           <div class="profile-name">${u.name}</div>
           <div class="profile-meta">Guardado: ${fmt(totalSaved(u))} de ${fmt(u.meta)}</div>
@@ -1021,8 +1186,6 @@ function initAuth() {
   } else {
     qw.style.display = 'none';
   }
-
-  // set today on entry date
   document.getElementById('entry-data').valueAsDate = new Date();
 }
 
@@ -1030,7 +1193,6 @@ function quickLogin(username) {
   const db = loadDB();
   const u = db.users[username];
   if (!u) return;
-  // quick login needs password
   document.getElementById('login-user').value = username;
   showTab('login');
   document.getElementById('login-pass').focus();
@@ -1059,6 +1221,10 @@ function doRegister() {
     document.getElementById('reg-error').textContent = 'Preencha todos os campos.';
     return;
   }
+  if (username === ADMIN_USERNAME) {
+    document.getElementById('reg-error').textContent = 'Nome de usuário reservado.';
+    return;
+  }
 
   const db = loadDB();
   if (db.users[username]) {
@@ -1078,10 +1244,12 @@ function doRegister() {
 }
 
 function loginAs(username) {
-  const db = loadDB();
   currentUser = username;
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('main-screen').style.display = 'block';
+  // mostrar aba admin só para admin
+  const u = getUser();
+  document.getElementById('tab-admin').style.display = u.isAdmin ? 'block' : 'none';
   refreshUI();
 }
 
@@ -1131,25 +1299,97 @@ function fmtDate(iso) {
   return d.toLocaleDateString('pt-BR');
 }
 
+// ══ AVATAR HELPERS ══
+// Retorna HTML de avatar (foto ou iniciais) para uso inline
+function avatarContent(u, size) {
+  if (u.avatar) {
+    return `<img src="${u.avatar}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;">`;
+  }
+  return initials(u.name);
+}
+
+function updateNavAvatar() {
+  const u = getUser();
+  const el = document.getElementById('nav-avatar');
+  if (u.avatar) {
+    el.innerHTML = `<img src="${u.avatar}" style="width:34px;height:34px;object-fit:cover;border-radius:50%;">`;
+  } else {
+    el.textContent = initials(u.name);
+  }
+}
+
+// ══ FOTO DE PERFIL ══
+function handleAvatarUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('⚠ Imagem muito grande! Máx 2 MB.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result;
+    const u = getUser();
+    u.avatar = base64;
+    saveUser(u);
+    renderAvatarPreview(u);
+    updateNavAvatar();
+    showToast('✓ Foto de perfil atualizada!');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeAvatar() {
+  const u = getUser();
+  delete u.avatar;
+  saveUser(u);
+  renderAvatarPreview(u);
+  updateNavAvatar();
+  showToast('Foto removida.');
+}
+
+function renderAvatarPreview(u) {
+  const preview = document.getElementById('cfg-avatar-preview');
+  const initEl  = document.getElementById('cfg-avatar-initials');
+  const removeBtn = document.getElementById('btn-remove-avatar');
+  if (u.avatar) {
+    initEl.style.display = 'none';
+    preview.style.backgroundImage = `url('${u.avatar}')`;
+    preview.style.backgroundSize  = 'cover';
+    preview.style.backgroundPosition = 'center';
+    removeBtn.style.display = 'inline-block';
+  } else {
+    initEl.style.display = '';
+    initEl.textContent = initials(u.name);
+    preview.style.backgroundImage = '';
+    removeBtn.style.display = 'none';
+  }
+}
+
 // ══ UI ══
 function showSection(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
   const tabs = document.querySelectorAll('.nav-tab');
-  const map = ['dashboard','lancamentos','ranking','configuracoes'];
-  tabs[map.indexOf(name)].classList.add('active');
+  const u = getUser();
+  const map = u.isAdmin
+    ? ['dashboard','lancamentos','ranking','configuracoes','admin']
+    : ['dashboard','lancamentos','ranking','configuracoes'];
+  const idx = map.indexOf(name);
+  if (idx >= 0) tabs[idx].classList.add('active');
 
   if (name === 'ranking') renderRanking();
   if (name === 'configuracoes') loadConfig();
   if (name === 'dashboard') refreshDashboard();
   if (name === 'lancamentos') renderHistory();
+  if (name === 'admin') renderAdmin();
 }
 
 function refreshUI() {
   const u = getUser();
-  document.getElementById('nav-avatar').textContent = initials(u.name);
-  document.getElementById('nav-name').textContent = u.name.split(' ')[0];
+  updateNavAvatar();
+  document.getElementById('nav-name').textContent = u.name.split(' ')[0] + (u.isAdmin ? ' 🔐' : '');
   refreshDashboard();
   renderHistory();
   document.getElementById('entry-data').valueAsDate = new Date();
@@ -1185,7 +1425,6 @@ function refreshDashboard() {
   document.getElementById('chile-fill').style.height = pct + '%';
   document.getElementById('chile-pct').textContent = pct + '%';
 
-  // dash history (last 5)
   const entries = (u.entries || []).slice().reverse().slice(0,5);
   const dh = document.getElementById('dash-history');
   if (entries.length === 0) {
@@ -1271,6 +1510,7 @@ function loadConfig() {
   document.getElementById('cfg-meses').value = u.meses || 12;
   document.getElementById('cfg-name').value = u.name || '';
   document.getElementById('cfg-pass').value = '';
+  renderAvatarPreview(u);
 }
 
 function saveConfig() {
@@ -1281,12 +1521,13 @@ function saveConfig() {
   const newPass = document.getElementById('cfg-pass').value;
   if (newPass) u.password = btoa(newPass);
   saveUser(u);
-  document.getElementById('nav-avatar').textContent = initials(u.name);
-  document.getElementById('nav-name').textContent = u.name.split(' ')[0];
+  updateNavAvatar();
+  document.getElementById('nav-name').textContent = u.name.split(' ')[0] + (u.isAdmin ? ' 🔐' : '');
   showToast('✓ Configurações salvas!');
 }
 
 function deleteProfile() {
+  if (getUser().isAdmin) { showToast('O admin não pode ser apagado.'); return; }
   if (!confirm('Tem certeza? Todos os seus dados serão apagados!')) return;
   const db = loadDB();
   delete db.users[currentUser];
@@ -1298,14 +1539,14 @@ function deleteProfile() {
 // ══ RANKING ══
 function renderRanking() {
   const db = loadDB();
-  const users = Object.values(db.users).map(u => ({
+  // excluir admin do ranking
+  const users = Object.values(db.users).filter(u => !u.isAdmin).map(u => ({
     ...u,
     saved: Math.max(0, totalSaved(u)),
     pct: Math.min(100, Math.round(Math.max(0, totalSaved(u)) / (u.meta||15600) * 100))
   })).sort((a,b) => b.pct - a.pct);
 
   const maxSaved = Math.max(...users.map(u=>u.saved), 1);
-
   const posIcons = ['🥇','🥈','🥉'];
   const posClass = ['gold-pos','silver','bronze'];
 
@@ -1320,9 +1561,12 @@ function renderRanking() {
       : '<span class="badge-chip chip-start">Começando</span>';
     const isCurrent = u.username === currentUser ? ' style="background:var(--gold-faint)"' : '';
     const barW = Math.round(u.saved / maxSaved * 100);
+    const avHtml = u.avatar
+      ? `<div class="rank-avatar" style="background:none;border:1.5px solid var(--border-gold);overflow:hidden;padding:0;"><img src="${u.avatar}" style="width:38px;height:38px;object-fit:cover;"></div>`
+      : `<div class="rank-avatar">${initials(u.name)}</div>`;
     return `<div class="rank-item"${isCurrent}>
       <div class="rank-pos ${posClass[i] || ''}">${i < 3 ? posIcons[i] : (i+1)}</div>
-      <div class="rank-avatar">${initials(u.name)}</div>
+      ${avHtml}
       <div class="rank-info">
         <div class="rank-name">${u.name}${u.username === currentUser ? ' <span style="color:var(--gold);font-size:0.7rem;">(você)</span>' : ''}</div>
         <div class="rank-meta">${u.pct}% da meta &nbsp;${chip}</div>
@@ -1335,6 +1579,53 @@ function renderRanking() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ══ ADMIN PANEL ══
+function renderAdmin() {
+  if (!getUser().isAdmin) return;
+  const db = loadDB();
+  const users = Object.values(db.users).filter(u => !u.isAdmin);
+  const total = users.reduce((s, u) => s + Math.max(0, totalSaved(u)), 0);
+  const totalMeta = users.reduce((s, u) => s + (u.meta || 15600), 0);
+
+  document.getElementById('admin-stats').innerHTML = `
+    👥 Total de usuários: <strong>${users.length}</strong><br>
+    💰 Total guardado (todos): <strong>${fmt(total)}</strong><br>
+    🎯 Soma das metas: <strong>${fmt(totalMeta)}</strong><br>
+    📊 Progresso médio: <strong>${users.length ? Math.round(total/totalMeta*100) : 0}%</strong>
+  `;
+
+  if (users.length === 0) {
+    document.getElementById('admin-user-list').innerHTML = '<div class="history-empty">Nenhum usuário cadastrado.</div>';
+    return;
+  }
+
+  document.getElementById('admin-user-list').innerHTML = users.map(u => {
+    const saved = Math.max(0, totalSaved(u));
+    const pct   = Math.min(100, Math.round(saved / (u.meta||15600) * 100));
+    const avHtml = u.avatar
+      ? `<div class="profile-avatar" style="overflow:hidden;padding:0;"><img src="${u.avatar}" style="width:36px;height:36px;object-fit:cover;border-radius:50%;"></div>`
+      : `<div class="profile-avatar">${initials(u.name)}</div>`;
+    return `<div class="admin-user-row">
+      ${avHtml}
+      <div class="admin-user-info">
+        <div class="admin-user-name">${u.name} <span style="color:var(--text-muted);font-size:0.72rem;">@${u.username}</span></div>
+        <div class="admin-user-meta">${fmt(saved)} guardados · ${pct}% da meta · ${(u.entries||[]).length} lançamentos</div>
+      </div>
+      <button class="btn-admin-del" onclick="adminDeleteUser('${u.username}')">Apagar</button>
+    </div>`;
+  }).join('');
+}
+
+function adminDeleteUser(username) {
+  if (!getUser().isAdmin) return;
+  if (!confirm(`Apagar o perfil de "${username}" e todos os dados? Isso é irreversível.`)) return;
+  const db = loadDB();
+  delete db.users[username];
+  saveDB(db);
+  renderAdmin();
+  showToast(`Perfil @${username} apagado.`);
 }
 
 // ══ TOAST ══
