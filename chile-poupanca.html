@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chile Trip — Tropa do VRAU bb </title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0A2342;
+  --navy-light: #132d52;
+  --navy-mid: #1a3a63;
+  --gold: #C8A84B;
+  --gold-light: #e6c76a;
+  --gold-faint: rgba(200,168,75,0.12);
+  --red-chile: #D52B1E;
+  --white: #ffffff;
+  --off-white: #F7F5F0;
+  --text-muted: rgba(255,255,255,0.5);
+  --text-soft: rgba(255,255,255,0.75);
+  --border: rgba(255,255,255,0.1);
+  --border-gold: rgba(200,168,75,0.3);
+  --card-bg: rgba(255,255,255,0.05);
+  --card-hover: rgba(255,255,255,0.08);
+  --success: #27AE60;
+  --warning: #E67E22;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--navy);
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BG TEXTURE ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(200,168,75,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 10% 80%, rgba(26,58,99,0.8) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── LAYOUT ── */
+#app { position: relative; z-index: 1; }
+
+/* ── AUTH SCREEN ── */
+#auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.auth-box {
+  width: 100%;
+  max-width: 420px;
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.brand-flag {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.brand-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  color: var(--gold);
+  letter-spacing: -0.02em;
+}
+
+.brand-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.auth-tabs {
+  display: flex;
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 0.65rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auth-tab.active {
+  background: var(--gold-faint);
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.form-group { margin-bottom: 1rem; }
+
+.form-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--card-bg);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--white);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus { border-color: var(--gold); }
+.form-input::placeholder { color: var(--text-muted); }
+
+.btn-primary {
+  width: 100%;
+  padding: 0.85rem;
+  background: var(--gold);
+  border: none;
+  border-radius: 8px;
+  color: var(--navy);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+
+.btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+
+.auth-profiles {
+  margin-top: 2rem;
+}
+
+.auth-profiles-title {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--card-bg);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.profile-item:hover { background: var(--card-hover); border-color: var(--border-gold); }
+
+.profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--gold-faint);
+  border: 1.5px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.profile-info { flex: 1; }
+.profile-name { font-size: 0.9rem; font-weight: 500; }
+.profile-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
+
+.error-msg {
+  color: #e74c3c;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+/* ── MAIN APP ── */
+#main-screen { display: none; min-height: 100vh; }
+
+/* ── TOP NAV ── */
+.topnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 0.5px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: rgba(10,35,66,0.95);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  color: var(--gold);
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nav-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--gold-faint);
+  border: 1.5px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gold);
+  cursor: pointer;
+}
+
+.nav-name { font-size: 0.85rem; color: var(--text-soft); }
+
+.btn-logout {
+  padding: 0.35rem 0.75rem;
+  background: transparent;
+  border: 0.5px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover { border-color: var(--red-chile); color: var(--red-chile); }
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 1.5rem;
+  border-bottom: 0.5px solid var(--border);
+  overflow-x: auto;
+}
+
+.nav-tab {
+  padding: 0.85rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  letter-spacing: 0.03em;
+}
+
+.nav-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+.nav-tab:hover:not(.active) { color: var(--text-soft); }
+
+/* ── CONTENT ── */
+.content { padding: 1.5rem; max-width: 900px; margin: 0 auto; }
+
+/* ── SECTION ── */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── DASHBOARD ── */
+.dashboard-hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .dashboard-hero { grid-template-columns: 1fr; }
+  .chile-bar-wrap { display: none; }
+}
+
+.hero-greeting {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.4rem;
+}
+
+.hero-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  color: var(--white);
+  margin-bottom: 0.75rem;
+}
+
+.hero-goal-line {
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
+
+.hero-goal-line span {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* Chile bar — the signature element */
+.chile-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chile-bar-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.chile-bar-outer {
+  width: 22px;
+  height: 160px;
+  border-radius: 11px;
+  background: rgba(255,255,255,0.08);
+  border: 0.5px solid var(--border-gold);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+  position: relative;
+}
+
+.chile-bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold), #a07830);
+  border-radius: 0 0 11px 11px;
+  transition: height 0.8s cubic-bezier(0.34,1.56,0.64,1);
+  min-height: 4px;
+}
+
+.chile-bar-pct {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+/* ── METRIC GRID ── */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric-card {
+  background: var(--card-bg);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  transition: border-color 0.2s;
+}
+
+.metric-card:hover { border-color: var(--border-gold); }
+
+.metric-card.gold-accent { border-color: var(--border-gold); background: var(--gold-faint); }
+
+.metric-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.4rem;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--white);
+  line-height: 1.1;
+}
+
+.metric-value.gold { color: var(--gold); }
+.metric-value.green { color: #2ecc71; }
+
+.metric-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+/* ── PROGRESS BAR ── */
+.progress-section {
+  background: var(--card-bg);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+}
+
+.progress-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.progress-pct { font-size: 1.1rem; font-weight: 600; color: var(--gold); }
+
+.progress-bar-bg {
+  height: 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.6rem;
+}
+
+.progress-bar-fill {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #a07830, var(--gold), var(--gold-light));
+  transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ── HISTORY LIST ── */
+.history-section {
+  background: var(--card-bg);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.history-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+.history-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 0.5px solid var(--border);
+  transition: background 0.15s;
+}
+
+.history-item:last-child { border-bottom: none; }
+.history-item:hover { background: var(--card-hover); }
+
+.history-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+}
+
+.history-dot.expense { background: var(--red-chile); }
+
+.history-info { flex: 1; }
+.history-desc { font-size: 0.88rem; font-weight: 500; }
+.history-date { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+.history-amount { font-size: 0.95rem; font-weight: 600; }
+.history-amount.income { color: #2ecc71; }
+.history-amount.expense { color: #e74c3c; }
+
+.history-del {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem;
+  transition: color 0.2s;
+  line-height: 1;
+}
+.history-del:hover { color: var(--red-chile); }
+
+/* ── ADD ENTRY SECTION ── */
+.add-section { margin-top: 1.5rem; }
+
+.section-title-bar {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+}
+
+.add-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 500px) {
+  .add-grid { grid-template-columns: 1fr; }
+}
+
+.type-toggle {
+  display: flex;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 0.6rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.type-btn.active.income { background: rgba(39,174,96,0.15); color: #2ecc71; }
+.type-btn.active.expense { background: rgba(213,43,30,0.15); color: #e74c3c; }
+
+/* ── SETUP SECTION ── */
+.setup-card {
+  background: var(--card-bg);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.setup-card h3 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+  color: var(--text-soft);
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 500px) { .setup-grid { grid-template-columns: 1fr; } }
+
+.btn-save {
+  padding: 0.75rem 1.5rem;
+  background: var(--gold);
+  border: none;
+  border-radius: 8px;
+  color: var(--navy);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.25rem;
+}
+
+.btn-save:hover { background: var(--gold-light); }
+
+.btn-danger {
+  padding: 0.65rem 1.25rem;
+  background: transparent;
+  border: 0.5px solid rgba(213,43,30,0.4);
+  border-radius: 8px;
+  color: #e74c3c;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-danger:hover { background: rgba(213,43,30,0.1); }
+
+/* ── RANKING ── */
+.ranking-card {
+  background: var(--card-bg);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 0.5px solid var(--border);
+  transition: background 0.15s;
+}
+
+.rank-item:last-child { border-bottom: none; }
+.rank-item:hover { background: var(--card-hover); }
+
+.rank-pos {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 20px;
+  text-align: center;
+}
+
+.rank-pos.gold-pos { color: var(--gold); font-size: 1rem; }
+.rank-pos.silver { color: #a0a0a0; }
+.rank-pos.bronze { color: #cd7f32; }
+
+.rank-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--gold-faint);
+  border: 1.5px solid var(--border-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.rank-info { flex: 1; }
+.rank-name { font-size: 0.9rem; font-weight: 500; }
+.rank-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+.rank-amount { font-size: 0.95rem; font-weight: 600; color: var(--gold); }
+
+.rank-bar-wrap { width: 80px; }
+.rank-bar-bg { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; }
+.rank-bar-fill { height: 4px; background: var(--gold); border-radius: 2px; }
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--navy-mid);
+  border: 0.5px solid var(--border-gold);
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--white);
+  z-index: 999;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+select.form-input option { background: var(--navy-mid); color: var(--white); }
+
+.badge-chip {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chip-ready { background: rgba(39,174,96,0.2); color: #2ecc71; }
+.chip-going { background: rgba(200,168,75,0.2); color: var(--gold); }
+.chip-start { background: rgba(255,255,255,0.1); color: var(--text-muted); }
+
+hr.divider { border: none; border-top: 0.5px solid var(--border); margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+<!-- ══ AUTH SCREEN ══ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="brand">
+      <span class="brand-flag">🇨🇱</span>
+      <div class="brand-title">Chile Trip</div>
+      <div class="brand-sub">Poupança Premium · 2026</div>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="showTab('login')">Entrar</button>
+      <button class="auth-tab" onclick="showTab('register')">Criar perfil</button>
+    </div>
+
+    <div id="tab-login">
+      <div class="form-group">
+        <label class="form-label">Nome de usuário</label>
+        <input class="form-input" id="login-user" type="text" placeholder="seu nome" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input class="form-input" id="login-pass" type="password" placeholder="••••••">
+      </div>
+      <div id="login-error" class="error-msg"></div>
+      <br>
+      <button class="btn-primary" onclick="doLogin()">Entrar</button>
+    </div>
+
+    <div id="tab-register" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Nome completo</label>
+        <input class="form-input" id="reg-name" type="text" placeholder="João Silva">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nome de usuário</label>
+        <input class="form-input" id="reg-user" type="text" placeholder="joaosilva" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input class="form-input" id="reg-pass" type="password" placeholder="••••••">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Meta total da viagem (R$)</label>
+        <input class="form-input" id="reg-meta" type="number" placeholder="15600" value="15600">
+      </div>
+      <div id="reg-error" class="error-msg"></div>
+      <br>
+      <button class="btn-primary" onclick="doRegister()">Criar perfil</button>
+    </div>
+
+    <div id="profile-quick" style="display:none">
+      <hr class="divider">
+      <div class="auth-profiles-title">Entrar como</div>
+      <div class="profile-list" id="quick-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="main-screen">
+
+  <nav class="topnav">
+    <div class="nav-brand">🇨🇱 Chile Trip</div>
+    <div class="nav-user">
+      <div class="nav-avatar" id="nav-avatar">?</div>
+      <span class="nav-name" id="nav-name">—</span>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </nav>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showSection('dashboard')">Dashboard</button>
+    <button class="nav-tab" onclick="showSection('lancamentos')">Lançamentos</button>
+    <button class="nav-tab" onclick="showSection('ranking')">Ranking</button>
+    <button class="nav-tab" onclick="showSection('configuracoes')">Configurações</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="section-dashboard" class="section active">
+
+      <div class="dashboard-hero">
+        <div>
+          <div class="hero-greeting">Bem-vindo de volta</div>
+          <div class="hero-name" id="dash-name">—</div>
+          <div class="hero-goal-line">
+            Meta: <span id="dash-meta">R$ 0</span> &nbsp;·&nbsp; 
+            Prazo: <span id="dash-meses">12 meses</span>
+          </div>
+        </div>
+        <div class="chile-bar-wrap">
+          <div class="chile-bar-label">Progresso</div>
+          <div class="chile-bar-outer">
+            <div class="chile-bar-fill" id="chile-fill" style="height:0%"></div>
+          </div>
+          <div class="chile-bar-pct" id="chile-pct">0%</div>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric-card gold-accent">
+          <div class="metric-label">Total guardado</div>
+          <div class="metric-value gold" id="m-guardado">R$ 0</div>
+          <div class="metric-sub" id="m-status">Começando!</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Meta diária</div>
+          <div class="metric-value" id="m-diaria">R$ 0</div>
+          <div class="metric-sub">para chegar lá</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Meta mensal</div>
+          <div class="metric-value" id="m-mensal">R$ 0</div>
+          <div class="metric-sub">por mês</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Falta guardar</div>
+          <div class="metric-value" id="m-falta">R$ 0</div>
+          <div class="metric-sub" id="m-dias-falta">—</div>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-header">
+          <span class="progress-title">Progresso da meta</span>
+          <span class="progress-pct" id="prog-pct">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="prog-bar" style="width:0%"></div>
+        </div>
+        <div class="progress-labels">
+          <span>R$ 0</span>
+          <span id="prog-meta-label">R$ 0</span>
+        </div>
+      </div>
+
+      <div class="history-section">
+        <div class="history-header">
+          <span class="history-title">Últimos lançamentos</span>
+        </div>
+        <div id="dash-history"></div>
+      </div>
+    </div>
+
+    <!-- ── LANÇAMENTOS ── -->
+    <div id="section-lancamentos" class="section">
+      <div class="add-section">
+        <div class="section-title-bar">Novo lançamento</div>
+
+        <div class="type-toggle">
+          <button class="type-btn active income" id="btn-income" onclick="setType('income')">+ Entrada</button>
+          <button class="type-btn expense" id="btn-expense" onclick="setType('expense')">− Saída</button>
+        </div>
+
+        <div class="add-grid">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Valor (R$)</label>
+            <input class="form-input" id="entry-valor" type="number" placeholder="0,00" min="0" step="0.01">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Data</label>
+            <input class="form-input" id="entry-data" type="date">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:0.75rem">
+          <label class="form-label">Descrição</label>
+          <input class="form-input" id="entry-desc" type="text" placeholder="Freelance, salário, economia do mês...">
+        </div>
+
+        <button class="btn-primary" style="margin-top:0.25rem" onclick="addEntry()">Registrar</button>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section-title-bar">Histórico completo</div>
+      <div class="history-section">
+        <div id="full-history"></div>
+      </div>
+    </div>
+
+    <!-- ── RANKING ── -->
+    <div id="section-ranking" class="section">
+      <div class="section-title-bar" style="margin-bottom:1rem">Todos os viajantes</div>
+      <div class="ranking-card" id="ranking-list"></div>
+    </div>
+
+    <!-- ── CONFIGURAÇÕES ── -->
+    <div id="section-configuracoes" class="section">
+      <div class="setup-card">
+        <h3>Configurações da viagem</h3>
+        <div class="setup-grid">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Meta total (R$)</label>
+            <input class="form-input" id="cfg-meta" type="number" min="0">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Meses para guardar</label>
+            <input class="form-input" id="cfg-meses" type="number" min="1" max="60">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Nome completo</label>
+            <input class="form-input" id="cfg-name" type="text">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Nova senha (opcional)</label>
+            <input class="form-input" id="cfg-pass" type="password" placeholder="deixe em branco para manter">
+          </div>
+        </div>
+        <br>
+        <button class="btn-save" onclick="saveConfig()">Salvar alterações</button>
+      </div>
+
+      <div class="setup-card">
+        <h3 style="color:#e74c3c">Zona de perigo</h3>
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem;">
+          Apagar permanentemente este perfil e todos os lançamentos.
+        </p>
+        <button class="btn-danger" onclick="deleteProfile()">Apagar meu perfil</button>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main-screen -->
+
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ STORAGE HELPERS ══
+const STORE_KEY = 'chile_app_v1';
+
+function loadDB() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { users: {} }; }
+  catch { return { users: {} }; }
+}
+
+function saveDB(db) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(db));
+}
+
+// ══ STATE ══
+let currentUser = null;
+let entryType = 'income';
+
+// ══ AUTH ══
+function showTab(tab) {
+  document.getElementById('tab-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('tab-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.querySelectorAll('.auth-tab').forEach((b,i) => {
+    b.classList.toggle('active', (i===0 && tab==='login') || (i===1 && tab==='register'));
+  });
+}
+
+function initAuth() {
+  const db = loadDB();
+  const users = Object.values(db.users);
+  const qw = document.getElementById('profile-quick');
+  const ql = document.getElementById('quick-list');
+  if (users.length > 0) {
+    qw.style.display = 'block';
+    ql.innerHTML = users.map(u => `
+      <div class="profile-item" onclick="quickLogin('${u.username}')">
+        <div class="profile-avatar">${initials(u.name)}</div>
+        <div class="profile-info">
+          <div class="profile-name">${u.name}</div>
+          <div class="profile-meta">Guardado: ${fmt(totalSaved(u))} de ${fmt(u.meta)}</div>
+        </div>
+        <span style="color:var(--text-muted); font-size:0.8rem;">→</span>
+      </div>`).join('');
+  } else {
+    qw.style.display = 'none';
+  }
+
+  // set today on entry date
+  document.getElementById('entry-data').valueAsDate = new Date();
+}
+
+function quickLogin(username) {
+  const db = loadDB();
+  const u = db.users[username];
+  if (!u) return;
+  // quick login needs password
+  document.getElementById('login-user').value = username;
+  showTab('login');
+  document.getElementById('login-pass').focus();
+}
+
+function doLogin() {
+  const username = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const db = loadDB();
+  const u = db.users[username];
+  if (!u || u.password !== btoa(pass)) {
+    document.getElementById('login-error').textContent = 'Usuário ou senha incorretos.';
+    return;
+  }
+  document.getElementById('login-error').textContent = '';
+  loginAs(username);
+}
+
+function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const username = document.getElementById('reg-user').value.trim().toLowerCase().replace(/\s+/g,'');
+  const pass = document.getElementById('reg-pass').value;
+  const meta = parseFloat(document.getElementById('reg-meta').value) || 15600;
+
+  if (!name || !username || !pass) {
+    document.getElementById('reg-error').textContent = 'Preencha todos os campos.';
+    return;
+  }
+
+  const db = loadDB();
+  if (db.users[username]) {
+    document.getElementById('reg-error').textContent = 'Nome de usuário já existe.';
+    return;
+  }
+
+  db.users[username] = {
+    username, name, password: btoa(pass),
+    meta, meses: 12,
+    entries: [],
+    createdAt: new Date().toISOString()
+  };
+  saveDB(db);
+  document.getElementById('reg-error').textContent = '';
+  loginAs(username);
+}
+
+function loginAs(username) {
+  const db = loadDB();
+  currentUser = username;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'block';
+  refreshUI();
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('login-pass').value = '';
+  initAuth();
+}
+
+// ══ DATA HELPERS ══
+function getUser() {
+  const db = loadDB();
+  return db.users[currentUser];
+}
+
+function saveUser(u) {
+  const db = loadDB();
+  db.users[currentUser] = u;
+  saveDB(db);
+}
+
+function totalSaved(u) {
+  return (u.entries || []).reduce((sum, e) => {
+    return sum + (e.type === 'income' ? e.amount : -e.amount);
+  }, 0);
+}
+
+function initials(name) {
+  return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+}
+
+function fmt(n) {
+  n = Math.max(0, n);
+  return 'R$ ' + Math.round(n).toLocaleString('pt-BR');
+}
+
+function fmtSigned(n) {
+  const abs = Math.abs(n);
+  const sign = n >= 0 ? '+' : '-';
+  return sign + ' R$ ' + Math.round(abs).toLocaleString('pt-BR');
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('pt-BR');
+}
+
+// ══ UI ══
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const map = ['dashboard','lancamentos','ranking','configuracoes'];
+  tabs[map.indexOf(name)].classList.add('active');
+
+  if (name === 'ranking') renderRanking();
+  if (name === 'configuracoes') loadConfig();
+  if (name === 'dashboard') refreshDashboard();
+  if (name === 'lancamentos') renderHistory();
+}
+
+function refreshUI() {
+  const u = getUser();
+  document.getElementById('nav-avatar').textContent = initials(u.name);
+  document.getElementById('nav-name').textContent = u.name.split(' ')[0];
+  refreshDashboard();
+  renderHistory();
+  document.getElementById('entry-data').valueAsDate = new Date();
+}
+
+function refreshDashboard() {
+  const u = getUser();
+  const saved = Math.max(0, totalSaved(u));
+  const meta = u.meta || 15600;
+  const meses = u.meses || 12;
+  const falta = Math.max(0, meta - saved);
+  const pct = Math.min(100, Math.round(saved / meta * 100));
+  const diaria = (meta - saved) / (meses * 30);
+  const mensal = (meta - saved) / meses;
+
+  document.getElementById('dash-name').textContent = u.name.split(' ')[0] + ',';
+  document.getElementById('dash-meta').textContent = fmt(meta);
+  document.getElementById('dash-meses').textContent = meses + ' meses';
+
+  document.getElementById('m-guardado').textContent = fmt(saved);
+  document.getElementById('m-diaria').textContent = fmt(diaria) + '/dia';
+  document.getElementById('m-mensal').textContent = fmt(mensal) + '/mês';
+  document.getElementById('m-falta').textContent = fmt(falta);
+
+  const status = pct >= 100 ? '🎉 Meta atingida!' : pct >= 75 ? '🔥 Quase lá!' : pct >= 50 ? '💪 Mais da metade!' : pct >= 25 ? '🚀 Bom progresso' : '✈️ Começando a jornada';
+  document.getElementById('m-status').textContent = status;
+  document.getElementById('m-dias-falta').textContent = 'para chegar à meta';
+
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-meta-label').textContent = fmt(meta);
+
+  document.getElementById('chile-fill').style.height = pct + '%';
+  document.getElementById('chile-pct').textContent = pct + '%';
+
+  // dash history (last 5)
+  const entries = (u.entries || []).slice().reverse().slice(0,5);
+  const dh = document.getElementById('dash-history');
+  if (entries.length === 0) {
+    dh.innerHTML = '<div class="history-empty">Nenhum lançamento ainda.<br>Vá em Lançamentos para adicionar!</div>';
+  } else {
+    dh.innerHTML = entries.map(e => historyItemHTML(e)).join('');
+  }
+}
+
+function historyItemHTML(e, showDel = false) {
+  const isInc = e.type === 'income';
+  return `<div class="history-item">
+    <div class="history-dot ${isInc ? '' : 'expense'}"></div>
+    <div class="history-info">
+      <div class="history-desc">${e.desc || (isInc ? 'Entrada' : 'Saída')}</div>
+      <div class="history-date">${fmtDate(e.date)}</div>
+    </div>
+    <div class="history-amount ${isInc ? 'income' : 'expense'}">${isInc ? '+' : '-'} ${fmt(e.amount)}</div>
+    ${showDel ? `<button class="history-del" onclick="deleteEntry('${e.id}')" title="Remover">×</button>` : ''}
+  </div>`;
+}
+
+function renderHistory() {
+  const u = getUser();
+  const entries = (u.entries || []).slice().reverse();
+  const fh = document.getElementById('full-history');
+  if (entries.length === 0) {
+    fh.innerHTML = '<div class="history-empty">Nenhum lançamento ainda.</div>';
+  } else {
+    fh.innerHTML = entries.map(e => historyItemHTML(e, true)).join('');
+  }
+}
+
+// ══ ENTRIES ══
+function setType(t) {
+  entryType = t;
+  document.getElementById('btn-income').classList.toggle('active', t === 'income');
+  document.getElementById('btn-expense').classList.toggle('active', t === 'expense');
+}
+
+function addEntry() {
+  const valor = parseFloat(document.getElementById('entry-valor').value);
+  const data = document.getElementById('entry-data').value;
+  const desc = document.getElementById('entry-desc').value.trim();
+
+  if (!valor || valor <= 0 || !data) {
+    showToast('Preencha valor e data!');
+    return;
+  }
+
+  const u = getUser();
+  u.entries = u.entries || [];
+  u.entries.push({
+    id: Date.now().toString(),
+    type: entryType,
+    amount: valor,
+    date: data,
+    desc: desc || (entryType === 'income' ? 'Entrada' : 'Saída')
+  });
+  saveUser(u);
+
+  document.getElementById('entry-valor').value = '';
+  document.getElementById('entry-desc').value = '';
+
+  showToast(entryType === 'income' ? '✓ Entrada registrada!' : '✓ Saída registrada!');
+  refreshDashboard();
+  renderHistory();
+}
+
+function deleteEntry(id) {
+  const u = getUser();
+  u.entries = (u.entries || []).filter(e => e.id !== id);
+  saveUser(u);
+  refreshDashboard();
+  renderHistory();
+  showToast('Lançamento removido.');
+}
+
+// ══ CONFIG ══
+function loadConfig() {
+  const u = getUser();
+  document.getElementById('cfg-meta').value = u.meta || 15600;
+  document.getElementById('cfg-meses').value = u.meses || 12;
+  document.getElementById('cfg-name').value = u.name || '';
+  document.getElementById('cfg-pass').value = '';
+}
+
+function saveConfig() {
+  const u = getUser();
+  u.meta = parseFloat(document.getElementById('cfg-meta').value) || 15600;
+  u.meses = parseInt(document.getElementById('cfg-meses').value) || 12;
+  u.name = document.getElementById('cfg-name').value.trim() || u.name;
+  const newPass = document.getElementById('cfg-pass').value;
+  if (newPass) u.password = btoa(newPass);
+  saveUser(u);
+  document.getElementById('nav-avatar').textContent = initials(u.name);
+  document.getElementById('nav-name').textContent = u.name.split(' ')[0];
+  showToast('✓ Configurações salvas!');
+}
+
+function deleteProfile() {
+  if (!confirm('Tem certeza? Todos os seus dados serão apagados!')) return;
+  const db = loadDB();
+  delete db.users[currentUser];
+  saveDB(db);
+  doLogout();
+  showToast('Perfil apagado.');
+}
+
+// ══ RANKING ══
+function renderRanking() {
+  const db = loadDB();
+  const users = Object.values(db.users).map(u => ({
+    ...u,
+    saved: Math.max(0, totalSaved(u)),
+    pct: Math.min(100, Math.round(Math.max(0, totalSaved(u)) / (u.meta||15600) * 100))
+  })).sort((a,b) => b.pct - a.pct);
+
+  const maxSaved = Math.max(...users.map(u=>u.saved), 1);
+
+  const posIcons = ['🥇','🥈','🥉'];
+  const posClass = ['gold-pos','silver','bronze'];
+
+  if (users.length === 0) {
+    document.getElementById('ranking-list').innerHTML = '<div class="history-empty">Nenhum viajante ainda.</div>';
+    return;
+  }
+
+  document.getElementById('ranking-list').innerHTML = users.map((u,i) => {
+    const chip = u.pct >= 100 ? '<span class="badge-chip chip-ready">Pronto!</span>'
+      : u.pct >= 50 ? '<span class="badge-chip chip-going">No caminho</span>'
+      : '<span class="badge-chip chip-start">Começando</span>';
+    const isCurrent = u.username === currentUser ? ' style="background:var(--gold-faint)"' : '';
+    const barW = Math.round(u.saved / maxSaved * 100);
+    return `<div class="rank-item"${isCurrent}>
+      <div class="rank-pos ${posClass[i] || ''}">${i < 3 ? posIcons[i] : (i+1)}</div>
+      <div class="rank-avatar">${initials(u.name)}</div>
+      <div class="rank-info">
+        <div class="rank-name">${u.name}${u.username === currentUser ? ' <span style="color:var(--gold);font-size:0.7rem;">(você)</span>' : ''}</div>
+        <div class="rank-meta">${u.pct}% da meta &nbsp;${chip}</div>
+      </div>
+      <div>
+        <div class="rank-amount">${fmt(u.saved)}</div>
+        <div class="rank-bar-wrap" style="margin-top:4px">
+          <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barW}%"></div></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══ TOAST ══
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ══ ENTER KEY ══
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('tab-login').style.display !== 'none' && document.getElementById('auth-screen').style.display !== 'none') doLogin();
+  if (document.getElementById('tab-register').style.display !== 'none' && document.getElementById('auth-screen').style.display !== 'none') doRegister();
+});
+
+// ══ INIT ══
+initAuth();
+</script>
+</body>
+</html>
