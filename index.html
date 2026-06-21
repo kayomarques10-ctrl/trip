@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chile Trip — Tropa do VRAU bb </title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --navy: #0A2342;
@@ -1114,46 +1115,16 @@ hr.divider { border: none; border-top: 0.5px solid var(--border); margin: 1.5rem
 <div class="toast" id="toast"></div>
 
 <script>
-// ══ STORAGE HELPERS ══
-const STORE_KEY = 'chile_app_v1';
+// ══ SUPABASE SETUP ══
+const SUPABASE_URL = 'https://wdkldkoaximwshvvfuqx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indka2xka29heGltd3NodnZmdXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMjE2OTEsImV4cCI6MjA5NzU5NzY5MX0.2ZU05wf5Y3FcTbrqWi5feJEPwwMHSdST_yu_2kTaZdo';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function loadDB() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { users: {} }; }
-  catch { return { users: {} }; }
-}
-
-function saveDB(db) {
-  localStorage.setItem(STORE_KEY, JSON.stringify(db));
-}
-
-// ══ ADMIN SEED ══
 const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'ChileVrau2026!';
-const ADMIN_NAME     = 'Administrador';
-
-function seedAdmin() {
-  const db = loadDB();
-  if (!db.users[ADMIN_USERNAME]) {
-    db.users[ADMIN_USERNAME] = {
-      username: ADMIN_USERNAME,
-      name: ADMIN_NAME,
-      password: btoa(ADMIN_PASSWORD),
-      meta: 99999,
-      meses: 12,
-      entries: [],
-      isAdmin: true,
-      createdAt: new Date().toISOString()
-    };
-    saveDB(db);
-  } else {
-    // garante que o admin sempre tem a flag
-    db.users[ADMIN_USERNAME].isAdmin = true;
-    saveDB(db);
-  }
-}
 
 // ══ STATE ══
-let currentUser = null;
+let currentUser = null;      // username string
+let currentUserData = null;  // cached user object (sem senha)
 let entryType = 'income';
 
 // ══ AUTH ══
@@ -1165,53 +1136,83 @@ function showTab(tab) {
   });
 }
 
-function initAuth() {
-  seedAdmin();
-  const db = loadDB();
-  // mostrar apenas usuários não-admin na tela de quick login
-  const users = Object.values(db.users).filter(u => !u.isAdmin);
-  const qw = document.getElementById('profile-quick');
-  const ql = document.getElementById('quick-list');
-  if (users.length > 0) {
-    qw.style.display = 'block';
-    ql.innerHTML = users.map(u => `
-      <div class="profile-item" onclick="quickLogin('${u.username}')">
-        <div class="profile-avatar">${avatarContent(u, 36)}</div>
-        <div class="profile-info">
-          <div class="profile-name">${u.name}</div>
-          <div class="profile-meta">Guardado: ${fmt(totalSaved(u))} de ${fmt(u.meta)}</div>
-        </div>
-        <span style="color:var(--text-muted); font-size:0.8rem;">→</span>
-      </div>`).join('');
-  } else {
-    qw.style.display = 'none';
+async function initAuth() {
+  try {
+    const { data: users, error } = await sb
+      .from('users_public')
+      .select('*')
+      .eq('is_admin', false);
+
+    const qw = document.getElementById('profile-quick');
+    const ql = document.getElementById('quick-list');
+
+    if (error) throw error;
+
+    if (users && users.length > 0) {
+      // buscar saldo de cada um para exibir na lista
+      const withSaved = await Promise.all(users.map(async u => {
+        const saved = await totalSavedRemote(u.username);
+        return { ...u, saved };
+      }));
+
+      qw.style.display = 'block';
+      ql.innerHTML = withSaved.map(u => `
+        <div class="profile-item" onclick="quickLogin('${u.username}')">
+          <div class="profile-avatar">${avatarContent(u, 36)}</div>
+          <div class="profile-info">
+            <div class="profile-name">${u.name}</div>
+            <div class="profile-meta">Guardado: ${fmt(u.saved)} de ${fmt(u.meta)}</div>
+          </div>
+          <span style="color:var(--text-muted); font-size:0.8rem;">→</span>
+        </div>`).join('');
+    } else {
+      qw.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('Erro ao carregar usuários:', err);
+    showToast('⚠ Erro de conexão com o banco.');
   }
+
   document.getElementById('entry-data').valueAsDate = new Date();
 }
 
 function quickLogin(username) {
-  const db = loadDB();
-  const u = db.users[username];
-  if (!u) return;
   document.getElementById('login-user').value = username;
   showTab('login');
   document.getElementById('login-pass').focus();
 }
 
-function doLogin() {
+async function doLogin() {
   const username = document.getElementById('login-user').value.trim().toLowerCase();
   const pass = document.getElementById('login-pass').value;
-  const db = loadDB();
-  const u = db.users[username];
-  if (!u || u.password !== btoa(pass)) {
-    document.getElementById('login-error').textContent = 'Usuário ou senha incorretos.';
+
+  if (!username || !pass) {
+    document.getElementById('login-error').textContent = 'Preencha usuário e senha.';
     return;
   }
-  document.getElementById('login-error').textContent = '';
-  loginAs(username);
+
+  try {
+    const { data, error } = await sb.rpc('verify_login', {
+      p_username: username,
+      p_password: pass
+    });
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      document.getElementById('login-error').textContent = 'Usuário ou senha incorretos.';
+      return;
+    }
+
+    document.getElementById('login-error').textContent = '';
+    await loginAs(data[0]);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('login-error').textContent = 'Erro ao conectar. Tente novamente.';
+  }
 }
 
-function doRegister() {
+async function doRegister() {
   const name = document.getElementById('reg-name').value.trim();
   const username = document.getElementById('reg-user').value.trim().toLowerCase().replace(/\s+/g,'');
   const pass = document.getElementById('reg-pass').value;
@@ -1226,35 +1227,48 @@ function doRegister() {
     return;
   }
 
-  const db = loadDB();
-  if (db.users[username]) {
-    document.getElementById('reg-error').textContent = 'Nome de usuário já existe.';
-    return;
-  }
+  try {
+    // verifica se já existe
+    const { data: existing } = await sb
+      .from('users_public')
+      .select('username')
+      .eq('username', username)
+      .maybeSingle();
 
-  db.users[username] = {
-    username, name, password: btoa(pass),
-    meta, meses: 12,
-    entries: [],
-    createdAt: new Date().toISOString()
-  };
-  saveDB(db);
-  document.getElementById('reg-error').textContent = '';
-  loginAs(username);
+    if (existing) {
+      document.getElementById('reg-error').textContent = 'Nome de usuário já existe.';
+      return;
+    }
+
+    const { data, error } = await sb.rpc('register_user', {
+      p_username: username,
+      p_name: name,
+      p_password: pass,
+      p_meta: meta
+    });
+
+    if (error) throw error;
+
+    document.getElementById('reg-error').textContent = '';
+    await loginAs(data[0]);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('reg-error').textContent = 'Erro ao criar perfil. Tente novamente.';
+  }
 }
 
-function loginAs(username) {
-  currentUser = username;
+async function loginAs(userRow) {
+  currentUser = userRow.username;
+  currentUserData = userRow;
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('main-screen').style.display = 'block';
-  // mostrar aba admin só para admin
-  const u = getUser();
-  document.getElementById('tab-admin').style.display = u.isAdmin ? 'block' : 'none';
-  refreshUI();
+  document.getElementById('tab-admin').style.display = userRow.is_admin ? 'block' : 'none';
+  await refreshUI();
 }
 
 function doLogout() {
   currentUser = null;
+  currentUserData = null;
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('main-screen').style.display = 'none';
   document.getElementById('login-pass').value = '';
@@ -1262,20 +1276,36 @@ function doLogout() {
 }
 
 // ══ DATA HELPERS ══
-function getUser() {
-  const db = loadDB();
-  return db.users[currentUser];
+async function getUser() {
+  // sempre busca fresco do banco para refletir mudanças
+  const { data, error } = await sb
+    .from('users_public')
+    .select('*')
+    .eq('username', currentUser)
+    .single();
+  if (error) { console.error(error); return currentUserData; }
+  currentUserData = data;
+  return data;
 }
 
-function saveUser(u) {
-  const db = loadDB();
-  db.users[currentUser] = u;
-  saveDB(db);
+async function getEntries(username) {
+  const { data, error } = await sb
+    .from('entries')
+    .select('*')
+    .eq('username', username)
+    .order('date', { ascending: true });
+  if (error) { console.error(error); return []; }
+  return data || [];
 }
 
-function totalSaved(u) {
-  return (u.entries || []).reduce((sum, e) => {
-    return sum + (e.type === 'income' ? e.amount : -e.amount);
+async function totalSavedRemote(username) {
+  const entries = await getEntries(username);
+  return totalSaved(entries);
+}
+
+function totalSaved(entries) {
+  return (entries || []).reduce((sum, e) => {
+    return sum + (e.type === 'income' ? Number(e.amount) : -Number(e.amount));
   }, 0);
 }
 
@@ -1288,73 +1318,94 @@ function fmt(n) {
   return 'R$ ' + Math.round(n).toLocaleString('pt-BR');
 }
 
-function fmtSigned(n) {
-  const abs = Math.abs(n);
-  const sign = n >= 0 ? '+' : '-';
-  return sign + ' R$ ' + Math.round(abs).toLocaleString('pt-BR');
-}
-
 function fmtDate(iso) {
   const d = new Date(iso + 'T12:00:00');
   return d.toLocaleDateString('pt-BR');
 }
 
 // ══ AVATAR HELPERS ══
-// Retorna HTML de avatar (foto ou iniciais) para uso inline
 function avatarContent(u, size) {
-  if (u.avatar) {
-    return `<img src="${u.avatar}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;">`;
+  if (u.avatar_url) {
+    return `<img src="${u.avatar_url}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;">`;
   }
   return initials(u.name);
 }
 
-function updateNavAvatar() {
-  const u = getUser();
+function updateNavAvatar(u) {
   const el = document.getElementById('nav-avatar');
-  if (u.avatar) {
-    el.innerHTML = `<img src="${u.avatar}" style="width:34px;height:34px;object-fit:cover;border-radius:50%;">`;
+  if (u.avatar_url) {
+    el.innerHTML = `<img src="${u.avatar_url}" style="width:34px;height:34px;object-fit:cover;border-radius:50%;">`;
   } else {
     el.textContent = initials(u.name);
   }
 }
 
-// ══ FOTO DE PERFIL ══
-function handleAvatarUpload(event) {
+// ══ FOTO DE PERFIL (Supabase Storage) ══
+async function handleAvatarUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   if (file.size > 2 * 1024 * 1024) {
     showToast('⚠ Imagem muito grande! Máx 2 MB.');
     return;
   }
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const base64 = e.target.result;
-    const u = getUser();
-    u.avatar = base64;
-    saveUser(u);
+
+  showToast('Enviando foto...');
+
+  try {
+    const ext = file.name.split('.').pop();
+    const path = `${currentUser}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await sb.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = sb.storage.from('avatars').getPublicUrl(path);
+    const avatarUrl = urlData.publicUrl;
+
+    const { error: updateError } = await sb
+      .from('users')
+      .update({ avatar_url: avatarUrl })
+      .eq('username', currentUser);
+
+    if (updateError) throw updateError;
+
+    const u = await getUser();
     renderAvatarPreview(u);
-    updateNavAvatar();
+    updateNavAvatar(u);
     showToast('✓ Foto de perfil atualizada!');
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ Erro ao enviar a foto.');
+  }
 }
 
-function removeAvatar() {
-  const u = getUser();
-  delete u.avatar;
-  saveUser(u);
-  renderAvatarPreview(u);
-  updateNavAvatar();
-  showToast('Foto removida.');
+async function removeAvatar() {
+  try {
+    const { error } = await sb
+      .from('users')
+      .update({ avatar_url: null })
+      .eq('username', currentUser);
+    if (error) throw error;
+
+    const u = await getUser();
+    renderAvatarPreview(u);
+    updateNavAvatar(u);
+    showToast('Foto removida.');
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ Erro ao remover a foto.');
+  }
 }
 
 function renderAvatarPreview(u) {
   const preview = document.getElementById('cfg-avatar-preview');
   const initEl  = document.getElementById('cfg-avatar-initials');
   const removeBtn = document.getElementById('btn-remove-avatar');
-  if (u.avatar) {
+  if (u.avatar_url) {
     initEl.style.display = 'none';
-    preview.style.backgroundImage = `url('${u.avatar}')`;
+    preview.style.backgroundImage = `url('${u.avatar_url}')`;
     preview.style.backgroundSize  = 'cover';
     preview.style.backgroundPosition = 'center';
     removeBtn.style.display = 'inline-block';
@@ -1367,37 +1418,38 @@ function renderAvatarPreview(u) {
 }
 
 // ══ UI ══
-function showSection(name) {
+async function showSection(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
   const tabs = document.querySelectorAll('.nav-tab');
-  const u = getUser();
-  const map = u.isAdmin
+  const u = await getUser();
+  const map = u.is_admin
     ? ['dashboard','lancamentos','ranking','configuracoes','admin']
     : ['dashboard','lancamentos','ranking','configuracoes'];
   const idx = map.indexOf(name);
   if (idx >= 0) tabs[idx].classList.add('active');
 
-  if (name === 'ranking') renderRanking();
-  if (name === 'configuracoes') loadConfig();
-  if (name === 'dashboard') refreshDashboard();
-  if (name === 'lancamentos') renderHistory();
-  if (name === 'admin') renderAdmin();
+  if (name === 'ranking') await renderRanking();
+  if (name === 'configuracoes') await loadConfig();
+  if (name === 'dashboard') await refreshDashboard();
+  if (name === 'lancamentos') await renderHistory();
+  if (name === 'admin') await renderAdmin();
 }
 
-function refreshUI() {
-  const u = getUser();
-  updateNavAvatar();
-  document.getElementById('nav-name').textContent = u.name.split(' ')[0] + (u.isAdmin ? ' 🔐' : '');
-  refreshDashboard();
-  renderHistory();
+async function refreshUI() {
+  const u = await getUser();
+  updateNavAvatar(u);
+  document.getElementById('nav-name').textContent = u.name.split(' ')[0] + (u.is_admin ? ' 🔐' : '');
+  await refreshDashboard();
+  await renderHistory();
   document.getElementById('entry-data').valueAsDate = new Date();
 }
 
-function refreshDashboard() {
-  const u = getUser();
-  const saved = Math.max(0, totalSaved(u));
+async function refreshDashboard() {
+  const u = await getUser();
+  const entries = await getEntries(currentUser);
+  const saved = Math.max(0, totalSaved(entries));
   const meta = u.meta || 15600;
   const meses = u.meses || 12;
   const falta = Math.max(0, meta - saved);
@@ -1425,12 +1477,12 @@ function refreshDashboard() {
   document.getElementById('chile-fill').style.height = pct + '%';
   document.getElementById('chile-pct').textContent = pct + '%';
 
-  const entries = (u.entries || []).slice().reverse().slice(0,5);
+  const lastFive = entries.slice().reverse().slice(0,5);
   const dh = document.getElementById('dash-history');
-  if (entries.length === 0) {
+  if (lastFive.length === 0) {
     dh.innerHTML = '<div class="history-empty">Nenhum lançamento ainda.<br>Vá em Lançamentos para adicionar!</div>';
   } else {
-    dh.innerHTML = entries.map(e => historyItemHTML(e)).join('');
+    dh.innerHTML = lastFive.map(e => historyItemHTML(e)).join('');
   }
 }
 
@@ -1439,7 +1491,7 @@ function historyItemHTML(e, showDel = false) {
   return `<div class="history-item">
     <div class="history-dot ${isInc ? '' : 'expense'}"></div>
     <div class="history-info">
-      <div class="history-desc">${e.desc || (isInc ? 'Entrada' : 'Saída')}</div>
+      <div class="history-desc">${e.description || (isInc ? 'Entrada' : 'Saída')}</div>
       <div class="history-date">${fmtDate(e.date)}</div>
     </div>
     <div class="history-amount ${isInc ? 'income' : 'expense'}">${isInc ? '+' : '-'} ${fmt(e.amount)}</div>
@@ -1447,14 +1499,14 @@ function historyItemHTML(e, showDel = false) {
   </div>`;
 }
 
-function renderHistory() {
-  const u = getUser();
-  const entries = (u.entries || []).slice().reverse();
+async function renderHistory() {
+  const entries = await getEntries(currentUser);
+  const reversed = entries.slice().reverse();
   const fh = document.getElementById('full-history');
-  if (entries.length === 0) {
+  if (reversed.length === 0) {
     fh.innerHTML = '<div class="history-empty">Nenhum lançamento ainda.</div>';
   } else {
-    fh.innerHTML = entries.map(e => historyItemHTML(e, true)).join('');
+    fh.innerHTML = reversed.map(e => historyItemHTML(e, true)).join('');
   }
 }
 
@@ -1465,7 +1517,7 @@ function setType(t) {
   document.getElementById('btn-expense').classList.toggle('active', t === 'expense');
 }
 
-function addEntry() {
+async function addEntry() {
   const valor = parseFloat(document.getElementById('entry-valor').value);
   const data = document.getElementById('entry-data').value;
   const desc = document.getElementById('entry-desc').value.trim();
@@ -1475,37 +1527,44 @@ function addEntry() {
     return;
   }
 
-  const u = getUser();
-  u.entries = u.entries || [];
-  u.entries.push({
-    id: Date.now().toString(),
-    type: entryType,
-    amount: valor,
-    date: data,
-    desc: desc || (entryType === 'income' ? 'Entrada' : 'Saída')
-  });
-  saveUser(u);
+  try {
+    const { error } = await sb.from('entries').insert({
+      username: currentUser,
+      type: entryType,
+      amount: valor,
+      date: data,
+      description: desc || (entryType === 'income' ? 'Entrada' : 'Saída')
+    });
+    if (error) throw error;
 
-  document.getElementById('entry-valor').value = '';
-  document.getElementById('entry-desc').value = '';
+    document.getElementById('entry-valor').value = '';
+    document.getElementById('entry-desc').value = '';
 
-  showToast(entryType === 'income' ? '✓ Entrada registrada!' : '✓ Saída registrada!');
-  refreshDashboard();
-  renderHistory();
+    showToast(entryType === 'income' ? '✓ Entrada registrada!' : '✓ Saída registrada!');
+    await refreshDashboard();
+    await renderHistory();
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ Erro ao registrar lançamento.');
+  }
 }
 
-function deleteEntry(id) {
-  const u = getUser();
-  u.entries = (u.entries || []).filter(e => e.id !== id);
-  saveUser(u);
-  refreshDashboard();
-  renderHistory();
-  showToast('Lançamento removido.');
+async function deleteEntry(id) {
+  try {
+    const { error } = await sb.from('entries').delete().eq('id', id);
+    if (error) throw error;
+    await refreshDashboard();
+    await renderHistory();
+    showToast('Lançamento removido.');
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ Erro ao remover lançamento.');
+  }
 }
 
 // ══ CONFIG ══
-function loadConfig() {
-  const u = getUser();
+async function loadConfig() {
+  const u = await getUser();
   document.getElementById('cfg-meta').value = u.meta || 15600;
   document.getElementById('cfg-meses').value = u.meses || 12;
   document.getElementById('cfg-name').value = u.name || '';
@@ -1513,119 +1572,179 @@ function loadConfig() {
   renderAvatarPreview(u);
 }
 
-function saveConfig() {
-  const u = getUser();
-  u.meta = parseFloat(document.getElementById('cfg-meta').value) || 15600;
-  u.meses = parseInt(document.getElementById('cfg-meses').value) || 12;
-  u.name = document.getElementById('cfg-name').value.trim() || u.name;
+async function saveConfig() {
+  const meta = parseFloat(document.getElementById('cfg-meta').value) || 15600;
+  const meses = parseInt(document.getElementById('cfg-meses').value) || 12;
+  const name = document.getElementById('cfg-name').value.trim();
   const newPass = document.getElementById('cfg-pass').value;
-  if (newPass) u.password = btoa(newPass);
-  saveUser(u);
-  updateNavAvatar();
-  document.getElementById('nav-name').textContent = u.name.split(' ')[0] + (u.isAdmin ? ' 🔐' : '');
-  showToast('✓ Configurações salvas!');
+
+  try {
+    const { error } = await sb
+      .from('users')
+      .update({ meta, meses, name: name || undefined })
+      .eq('username', currentUser);
+    if (error) throw error;
+
+    if (newPass) {
+      const { error: passErr } = await sb.rpc('set_user_password', {
+        p_username: currentUser,
+        p_password: newPass
+      });
+      if (passErr) throw passErr;
+    }
+
+    const u = await getUser();
+    updateNavAvatar(u);
+    document.getElementById('nav-name').textContent = u.name.split(' ')[0] + (u.is_admin ? ' 🔐' : '');
+    showToast('✓ Configurações salvas!');
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ Erro ao salvar configurações.');
+  }
 }
 
-function deleteProfile() {
-  if (getUser().isAdmin) { showToast('O admin não pode ser apagado.'); return; }
+async function deleteProfile() {
+  const u = await getUser();
+  if (u.is_admin) { showToast('O admin não pode ser apagado.'); return; }
   if (!confirm('Tem certeza? Todos os seus dados serão apagados!')) return;
-  const db = loadDB();
-  delete db.users[currentUser];
-  saveDB(db);
-  doLogout();
-  showToast('Perfil apagado.');
+
+  try {
+    const { error } = await sb.from('users').delete().eq('username', currentUser);
+    if (error) throw error;
+    doLogout();
+    showToast('Perfil apagado.');
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ Erro ao apagar perfil.');
+  }
 }
 
 // ══ RANKING ══
-function renderRanking() {
-  const db = loadDB();
-  // excluir admin do ranking
-  const users = Object.values(db.users).filter(u => !u.isAdmin).map(u => ({
-    ...u,
-    saved: Math.max(0, totalSaved(u)),
-    pct: Math.min(100, Math.round(Math.max(0, totalSaved(u)) / (u.meta||15600) * 100))
-  })).sort((a,b) => b.pct - a.pct);
+async function renderRanking() {
+  try {
+    const { data: users, error } = await sb
+      .from('users_public')
+      .select('*')
+      .eq('is_admin', false);
 
-  const maxSaved = Math.max(...users.map(u=>u.saved), 1);
-  const posIcons = ['🥇','🥈','🥉'];
-  const posClass = ['gold-pos','silver','bronze'];
+    if (error) throw error;
 
-  if (users.length === 0) {
-    document.getElementById('ranking-list').innerHTML = '<div class="history-empty">Nenhum viajante ainda.</div>';
-    return;
-  }
+    const withData = await Promise.all((users || []).map(async u => {
+      const entries = await getEntries(u.username);
+      const saved = Math.max(0, totalSaved(entries));
+      const pct = Math.min(100, Math.round(saved / (u.meta||15600) * 100));
+      return { ...u, saved, pct };
+    }));
 
-  document.getElementById('ranking-list').innerHTML = users.map((u,i) => {
-    const chip = u.pct >= 100 ? '<span class="badge-chip chip-ready">Pronto!</span>'
-      : u.pct >= 50 ? '<span class="badge-chip chip-going">No caminho</span>'
-      : '<span class="badge-chip chip-start">Começando</span>';
-    const isCurrent = u.username === currentUser ? ' style="background:var(--gold-faint)"' : '';
-    const barW = Math.round(u.saved / maxSaved * 100);
-    const avHtml = u.avatar
-      ? `<div class="rank-avatar" style="background:none;border:1.5px solid var(--border-gold);overflow:hidden;padding:0;"><img src="${u.avatar}" style="width:38px;height:38px;object-fit:cover;"></div>`
-      : `<div class="rank-avatar">${initials(u.name)}</div>`;
-    return `<div class="rank-item"${isCurrent}>
-      <div class="rank-pos ${posClass[i] || ''}">${i < 3 ? posIcons[i] : (i+1)}</div>
-      ${avHtml}
-      <div class="rank-info">
-        <div class="rank-name">${u.name}${u.username === currentUser ? ' <span style="color:var(--gold);font-size:0.7rem;">(você)</span>' : ''}</div>
-        <div class="rank-meta">${u.pct}% da meta &nbsp;${chip}</div>
-      </div>
-      <div>
-        <div class="rank-amount">${fmt(u.saved)}</div>
-        <div class="rank-bar-wrap" style="margin-top:4px">
-          <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barW}%"></div></div>
+    withData.sort((a,b) => b.pct - a.pct);
+
+    const maxSaved = Math.max(...withData.map(u=>u.saved), 1);
+    const posIcons = ['🥇','🥈','🥉'];
+    const posClass = ['gold-pos','silver','bronze'];
+
+    if (withData.length === 0) {
+      document.getElementById('ranking-list').innerHTML = '<div class="history-empty">Nenhum viajante ainda.</div>';
+      return;
+    }
+
+    document.getElementById('ranking-list').innerHTML = withData.map((u,i) => {
+      const chip = u.pct >= 100 ? '<span class="badge-chip chip-ready">Pronto!</span>'
+        : u.pct >= 50 ? '<span class="badge-chip chip-going">No caminho</span>'
+        : '<span class="badge-chip chip-start">Começando</span>';
+      const isCurrent = u.username === currentUser ? ' style="background:var(--gold-faint)"' : '';
+      const barW = Math.round(u.saved / maxSaved * 100);
+      const avHtml = u.avatar_url
+        ? `<div class="rank-avatar" style="background:none;border:1.5px solid var(--border-gold);overflow:hidden;padding:0;"><img src="${u.avatar_url}" style="width:38px;height:38px;object-fit:cover;"></div>`
+        : `<div class="rank-avatar">${initials(u.name)}</div>`;
+      return `<div class="rank-item"${isCurrent}>
+        <div class="rank-pos ${posClass[i] || ''}">${i < 3 ? posIcons[i] : (i+1)}</div>
+        ${avHtml}
+        <div class="rank-info">
+          <div class="rank-name">${u.name}${u.username === currentUser ? ' <span style="color:var(--gold);font-size:0.7rem;">(você)</span>' : ''}</div>
+          <div class="rank-meta">${u.pct}% da meta &nbsp;${chip}</div>
         </div>
-      </div>
-    </div>`;
-  }).join('');
+        <div>
+          <div class="rank-amount">${fmt(u.saved)}</div>
+          <div class="rank-bar-wrap" style="margin-top:4px">
+            <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barW}%"></div></div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+    document.getElementById('ranking-list').innerHTML = '<div class="history-empty">Erro ao carregar ranking.</div>';
+  }
 }
 
 // ══ ADMIN PANEL ══
-function renderAdmin() {
-  if (!getUser().isAdmin) return;
-  const db = loadDB();
-  const users = Object.values(db.users).filter(u => !u.isAdmin);
-  const total = users.reduce((s, u) => s + Math.max(0, totalSaved(u)), 0);
-  const totalMeta = users.reduce((s, u) => s + (u.meta || 15600), 0);
+async function renderAdmin() {
+  const u = await getUser();
+  if (!u.is_admin) return;
 
-  document.getElementById('admin-stats').innerHTML = `
-    👥 Total de usuários: <strong>${users.length}</strong><br>
-    💰 Total guardado (todos): <strong>${fmt(total)}</strong><br>
-    🎯 Soma das metas: <strong>${fmt(totalMeta)}</strong><br>
-    📊 Progresso médio: <strong>${users.length ? Math.round(total/totalMeta*100) : 0}%</strong>
-  `;
+  try {
+    const { data: users, error } = await sb
+      .from('users_public')
+      .select('*')
+      .eq('is_admin', false);
 
-  if (users.length === 0) {
-    document.getElementById('admin-user-list').innerHTML = '<div class="history-empty">Nenhum usuário cadastrado.</div>';
-    return;
+    if (error) throw error;
+
+    const withData = await Promise.all((users || []).map(async u => {
+      const entries = await getEntries(u.username);
+      const saved = Math.max(0, totalSaved(entries));
+      const pct = Math.min(100, Math.round(saved / (u.meta||15600) * 100));
+      return { ...u, saved, pct, entryCount: entries.length };
+    }));
+
+    const total = withData.reduce((s, u) => s + u.saved, 0);
+    const totalMeta = withData.reduce((s, u) => s + (u.meta || 15600), 0);
+
+    document.getElementById('admin-stats').innerHTML = `
+      👥 Total de usuários: <strong>${withData.length}</strong><br>
+      💰 Total guardado (todos): <strong>${fmt(total)}</strong><br>
+      🎯 Soma das metas: <strong>${fmt(totalMeta)}</strong><br>
+      📊 Progresso médio: <strong>${withData.length ? Math.round(total/totalMeta*100) : 0}%</strong>
+    `;
+
+    if (withData.length === 0) {
+      document.getElementById('admin-user-list').innerHTML = '<div class="history-empty">Nenhum usuário cadastrado.</div>';
+      return;
+    }
+
+    document.getElementById('admin-user-list').innerHTML = withData.map(u => {
+      const avHtml = u.avatar_url
+        ? `<div class="profile-avatar" style="overflow:hidden;padding:0;"><img src="${u.avatar_url}" style="width:36px;height:36px;object-fit:cover;border-radius:50%;"></div>`
+        : `<div class="profile-avatar">${initials(u.name)}</div>`;
+      return `<div class="admin-user-row">
+        ${avHtml}
+        <div class="admin-user-info">
+          <div class="admin-user-name">${u.name} <span style="color:var(--text-muted);font-size:0.72rem;">@${u.username}</span></div>
+          <div class="admin-user-meta">${fmt(u.saved)} guardados · ${u.pct}% da meta · ${u.entryCount} lançamentos</div>
+        </div>
+        <button class="btn-admin-del" onclick="adminDeleteUser('${u.username}')">Apagar</button>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ Erro ao carregar painel admin.');
   }
-
-  document.getElementById('admin-user-list').innerHTML = users.map(u => {
-    const saved = Math.max(0, totalSaved(u));
-    const pct   = Math.min(100, Math.round(saved / (u.meta||15600) * 100));
-    const avHtml = u.avatar
-      ? `<div class="profile-avatar" style="overflow:hidden;padding:0;"><img src="${u.avatar}" style="width:36px;height:36px;object-fit:cover;border-radius:50%;"></div>`
-      : `<div class="profile-avatar">${initials(u.name)}</div>`;
-    return `<div class="admin-user-row">
-      ${avHtml}
-      <div class="admin-user-info">
-        <div class="admin-user-name">${u.name} <span style="color:var(--text-muted);font-size:0.72rem;">@${u.username}</span></div>
-        <div class="admin-user-meta">${fmt(saved)} guardados · ${pct}% da meta · ${(u.entries||[]).length} lançamentos</div>
-      </div>
-      <button class="btn-admin-del" onclick="adminDeleteUser('${u.username}')">Apagar</button>
-    </div>`;
-  }).join('');
 }
 
-function adminDeleteUser(username) {
-  if (!getUser().isAdmin) return;
+async function adminDeleteUser(username) {
+  const u = await getUser();
+  if (!u.is_admin) return;
   if (!confirm(`Apagar o perfil de "${username}" e todos os dados? Isso é irreversível.`)) return;
-  const db = loadDB();
-  delete db.users[username];
-  saveDB(db);
-  renderAdmin();
-  showToast(`Perfil @${username} apagado.`);
+
+  try {
+    const { error } = await sb.from('users').delete().eq('username', username);
+    if (error) throw error;
+    await renderAdmin();
+    showToast(`Perfil @${username} apagado.`);
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ Erro ao apagar perfil.');
+  }
 }
 
 // ══ TOAST ══
@@ -1647,6 +1766,7 @@ document.addEventListener('keydown', e => {
 
 // ══ INIT ══
 initAuth();
+
 </script>
 </body>
 </html>
